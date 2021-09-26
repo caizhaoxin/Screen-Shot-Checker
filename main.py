@@ -18,6 +18,7 @@ def copy(source: str, target: str) -> None:
         print("Unexpected error:", sys.exc_info())
         exit(1)
 
+
 def check_by_string(a, d, dx) -> bool:
     screenshot_str = ["screenshot", "screen_shot", "screen-shot", "screen shot", "screencapture", "screen_capture",
                       "screen-capture", "screen capture", "screencap", "screen_cap", "screen-cap", "screen cap"]
@@ -29,6 +30,7 @@ def check_by_string(a, d, dx) -> bool:
         except:
             pass
     return False
+
 
 def check_by_permission(a, d, dx) -> bool:
     permissions = a.get_permissions()
@@ -59,6 +61,8 @@ def check_by_CONTENT_URI(a, d, dx) -> bool:
 根据是否有类（假设为C）继承Android.database.ContentObserver， 并继承onChange方法
 然后C被调用，调用的方法里有同时用到 C的构造方法 以及 媒体数据库的URl
 '''
+
+
 def check_overrde_ContentObserver_and_invoke(a, d, dx) -> bool:
     classes = dx.get_classes()
     sum_arrest = False
@@ -117,6 +121,8 @@ def check_overrde_ContentObserver_and_invoke(a, d, dx) -> bool:
 2、根据是否使用到CONTENT_URI系列的URL
 来判断
 '''
+
+
 def check_by_per_url(apk_path) -> bool:
     a, d, dx = AnalyzeAPK(os.path.join(file_path, apk_name))
     # check media_content
@@ -128,6 +134,7 @@ def check_by_per_url(apk_path) -> bool:
         return True
     return False
 
+
 '''
 根据：
 1、是否有READ_EXTERNAL_STORAGE权限
@@ -136,6 +143,8 @@ def check_by_per_url(apk_path) -> bool:
    然而，不知怎么操作，就这样子先把)
 来判断
 '''
+
+
 # check_permission_and_overrde_ContentObserver_and_invoke
 def check_p_a_o(apk_path) -> bool:
     a, d, dx = AnalyzeAPK(os.path.join(file_path, apk_name))
@@ -157,5 +166,10 @@ if __name__ == '__main__':
         print('analyzing ', apk_name, '........')
         source = os.path.join(file_path, apk_name)
         target = os.path.join(os.getcwd(), 'filter', apk_name)
-        if check_p_a_o(source):
-            copy(source, target)
+        try:
+            if check_p_a_o(source):
+                copy(source, target)
+        except BaseException:
+            print(apk_name, '检测失败, err:', BaseException)
+        finally:
+            pass
