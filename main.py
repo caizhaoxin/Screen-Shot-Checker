@@ -58,7 +58,7 @@ def check_by_CONTENT_URI(a, d, dx) -> bool:
 
 
 '''
-根据是否有类（假设为C）继承Android.database.ContentObserver， 并继承onChange方法
+根据是否有类（假设为C）继承Android.database.ContentObserver， 并改写onChange方法
 然后C被调用，调用的方法里有同时用到 C的构造方法 以及 媒体数据库的URl
 '''
 
@@ -138,7 +138,7 @@ def check_by_per_url(apk_path) -> bool:
 '''
 根据：
 1、是否有READ_EXTERNAL_STORAGE权限
-2、根据是否有类（假设为C）继承Android.database.ContentObserver， 并继承onChange方法
+2、根据是否有类（假设为C）继承Android.database.ContentObserver， 并改写onChange方法
 3、然后C被调用，调用的方法里有同时用到 C的构造方法 以及 媒体数据库的URl(目前我只会根据这个方法来判断，其实我觉得应该是吧url传参进C才比较准确，
    然而，不知怎么操作，就这样子先把)
 来判断
@@ -159,8 +159,8 @@ def check_p_a_o(apk_path) -> bool:
 
 
 if __name__ == '__main__':
-    # file_path = os.path.join('H:\\share')
-    file_path = os.path.join(os.getcwd(), 'test')
+    file_path = os.path.join('H:\\share')
+    # file_path = os.path.join(os.getcwd(), 'test')
     apk_list = os.listdir(file_path)
     for apk_name in apk_list:
         print('analyzing ', apk_name, '........')
