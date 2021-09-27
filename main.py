@@ -19,6 +19,7 @@ def copy(source: str, target: str) -> None:
         exit(1)
 
 
+# 根据特定字符串筛选
 def check_by_string(a, d, dx) -> bool:
     screenshot_str = ["screenshot", "screen_shot", "screen-shot", "screen shot", "screencapture", "screen_capture",
                       "screen-capture", "screen capture", "screencap", "screen_cap", "screen-cap", "screen cap"]
@@ -32,6 +33,7 @@ def check_by_string(a, d, dx) -> bool:
     return False
 
 
+# 根据特定权限筛选
 def check_by_permission(a, d, dx) -> bool:
     permissions = a.get_permissions()
     for permission in permissions:
@@ -41,6 +43,7 @@ def check_by_permission(a, d, dx) -> bool:
     return False
 
 
+# 根据特定媒体数据库URL筛选
 def check_by_CONTENT_URI(a, d, dx) -> bool:
     class_list = dx.get_classes()
     for class_item in class_list:
@@ -63,9 +66,32 @@ def check_by_CONTENT_URI(a, d, dx) -> bool:
 '''
 
 
+def getCallstack(_method, callstack, count):
+    ##
+    # 获取函数的调用树，全部存储callstack list
+    # count 用于防止栈益处，重载函数可能溢出
+    ##
+    ref = _method.get_xref_from()
+    if not ref or len(ref) == 0:
+        print('------------------------')
+        return
+    s = set()
+    for c, m, _ in ref:
+        #         callstack.append(c.name+' -> '+m.name)
+        invoke_str = c.name + ' -> ' + m.name
+        if invoke_str in s:
+            continue
+        print(invoke_str)
+        if count > 500:
+            print('====max ' + c.name + ':' + m.name)
+            return
+        count += 1
+        getCallstack(c.get_method_analysis(m), callstack, count)
+
+
 def check_overrde_ContentObserver_and_invoke(a, d, dx) -> bool:
-    classes = dx.get_classes()
     sum_arrest = False
+    classes = dx.get_classes()
     for _class in classes:
         # if 'MediaContentObserver' in _class.name:
         has_screenshot_suspicion = False
@@ -73,18 +99,19 @@ def check_overrde_ContentObserver_and_invoke(a, d, dx) -> bool:
         for method in _class.get_methods():
             # 重写了 父类的 Android.database.ContentObserver.onChange 方法， 该方法在父类啥都不做
             # 如果有改写onchange方法，那说明有使用的嫌疑，那么我们就找哪里调用了这个类
-            if 'onChange(Z)V' in str(method.get_method()):
+            if 'onChange(Z)V' in str(method.get_method()) and _class.extends == 'Landroid/database/ContentObserver;':
                 print(_class.name, '继承了Android.database.ContentObserver，并改写了onChange方法，有截屏监控的嫌疑')
                 has_screenshot_suspicion = True
             if has_screenshot_suspicion:
                 break
         if has_screenshot_suspicion:
-            # 看看哪里调用了这个类的<init>方法，然后
+            # 再次便利这个类的所有方法，找到<init>
             for method in _class.get_methods():
+                # 看看哪里调用了这个类的<init>方法，然后
                 if '<init>' in str(method.get_method()):
+                    # 查找所有调用
                     for _, call, _ in method.get_xref_from():
                         print("  called by -> {} -- {}".format(call.class_name, call.name))
-                        #                         print(dx.classes[call.class_name].get_methods)
                         for target_method in dx.classes[call.class_name].get_methods():
                             if target_method.is_external():
                                 continue
@@ -100,12 +127,17 @@ def check_overrde_ContentObserver_and_invoke(a, d, dx) -> bool:
                                 if _class.name + '-><init>' in ins.get_output():
                                     has_constructed_ContentObserver = True
                                 if use_CONTENT_URI and has_constructed_ContentObserver:
-                                    print(target_method.name, '同时构造ContentObserver 和 使用媒体数据连接， 所以有嫌疑！')
+                                    print(target_method.name, '同时构造ContentObserver 和 使用媒体数据连接，确实有截屏监控嫌疑！')
+                                    # 调用栈打印
+                                    print(target_method.name, ' 的调用栈')
+                                    cs = []
+                                    count = 0
+                                    getCallstack(method, cs, count)
                                     # 逮捕！！！
                                     arrest = True
+                                    sum_arrest = True
                                     break
             if arrest:
-                sum_arrest = True
                 print(_class.name, '同时构造ContentObserver 和 使用媒体数据连接， 有嫌疑！逮捕！')
             else:
                 print(_class.name, '检测完毕！无嫌疑！')
@@ -159,7 +191,7 @@ def check_p_a_o(apk_path) -> bool:
 
 
 if __name__ == '__main__':
-    file_path = os.path.join('H:\\share')
+    file_path = os.path.join('H:\\apk')
     # file_path = os.path.join(os.getcwd(), 'test')
     apk_list = os.listdir(file_path)
     for apk_name in apk_list:
